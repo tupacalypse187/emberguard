@@ -1,0 +1,49 @@
+name: "EmberGuard"
+description: "Always-on pull request security review on Muse Ember, with a pass/fail verdict comment and commit status."
+author: "NeuralSec Advisory"
+branding:
+  icon: "shield"
+  color: "orange"
+
+inputs:
+  mode:
+    description: "observe (comment only, never blocks) or enforce (failing verdict sets a failing commit status)"
+    required: false
+    default: "observe"
+  budget-usd:
+    description: "Hard budget cap for API spend, tracked by the cost ledger"
+    required: false
+    default: "10.00"
+  policy-path:
+    description: "Path to a policy pack file. Defaults to .emberguard/policy.md in the target repo, then the bundled default pack"
+    required: false
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Fetch the pull request diff
+      shell: bash
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        gh pr diff "${{ github.event.pull_request.number }}" \
+          --repo "${{ github.repository }}" > "${{ runner.temp }}/pr.diff"
+
+    - name: Run EmberGuard
+      shell: bash
+      env:
+        EMBERGUARD_MODE: ${{ inputs.mode }}
+        EMBERGUARD_BUDGET_USD: ${{ inputs.budget-usd }}
+        EMBERGUARD_POST: "1"
+        EMBERGUARD_PR_NUMBER: ${{ github.event.pull_request.number }}
+        EMBERGUARD_PR_SHA: ${{ github.event.pull_request.head.sha }}
+        GITHUB_TOKEN: ${{ github.token }}
+        META_MODEL_API_KEY: ${{ env.META_MODEL_API_KEY }}
+      run: |
+        ARGS="--diff ${{ runner.temp }}/pr.diff --repo-root ${{ github.workspace }} --mode ${{ inputs.mode }} --budget-usd ${{ inputs.budget-usd }} --ledger-out ${{ runner.temp }}/emberguard-ledger.json"
+        if [ -n "${{ inputs.policy-path }}" ]; then
+          ARGS="$ARGS --policy ${{ inputs.policy-path }}"
+        fi
+        python3 -m src.main $ARGS
+        cp "${{ runner.temp }}/emberguard-ledger.json" "${{ github.workspace }}/emberguard-ledger.json" || true

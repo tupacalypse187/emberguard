@@ -1,0 +1,39 @@
+diff --git a/src/billing/format.py b/src/billing/format.py
+new file mode 100644
+index 0000000..3b8f1a2
+--- /dev/null
++++ b/src/billing/format.py
+@@ -0,0 +1,18 @@
++"""Small formatting helpers for billing output."""
++
++from decimal import Decimal
++
++
++def format_currency(amount: Decimal, currency: str = "USD") -> str:
++    """Render an amount like $1,234.50 for display."""
++    quantized = amount.quantize(Decimal("0.01"))
++    return f"{currency} {quantized:,.2f}"
++
++
++def format_invoice_number(sequence: int) -> str:
++    """Render a zero-padded invoice number, for example INV-000421."""
++    if sequence < 0:
++        raise ValueError("invoice sequence must be non-negative")
++    return f"INV-{sequence:06d}"
+diff --git a/tests/test_format.py b/tests/test_format.py
+new file mode 100644
+index 0000000..9c2d4e7
+--- /dev/null
++++ b/tests/test_format.py
+@@ -0,0 +1,14 @@
++from decimal import Decimal
++
++from src.billing.format import format_currency, format_invoice_number
++
++
++def test_format_currency_two_decimals():
++    assert format_currency(Decimal("1234.5")) == "USD 1,234.50"
++
++
++def test_format_invoice_number_pads():
++    assert format_invoice_number(421) == "INV-000421"

@@ -1,0 +1,21 @@
+diff --git a/src/routes/account.py b/src/routes/account.py
+index 5f2a8c1..b41d7e9 100644
+--- a/src/routes/account.py
++++ b/src/routes/account.py
+@@ -8,10 +8,8 @@ from .auth import require_auth, current_user
+ 
+ bp = Blueprint("account", __name__)
+ 
+ 
+-@bp.route("/settings", methods=["GET", "POST"])
+-@require_auth
++@bp.route("/settings", methods=["GET", "POST"])
+ def account_settings():
+     """View and update the signed-in user's account settings."""
+-    user = current_user()
+-    if request.method == "POST":
+-        user.update_settings(request.form)
+-    return render_template("settings.html", user=user)
++    if request.method == "POST":
++        update_settings_for_email(request.form["email"], request.form)
++    return render_template("settings.html")

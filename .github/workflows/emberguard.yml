@@ -1,0 +1,46 @@
+name: EmberGuard
+
+# Dogfood workflow: EmberGuard reviews pull requests in this repo.
+# It runs in observe mode, so it comments and never blocks a merge.
+# Mock mode is the default until a Meta Model API key is configured,
+# which keeps CI at $0 spend during development.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+  statuses: write
+
+jobs:
+  emberguard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the pull request
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run the test suite
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Fetch the pull request diff
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh pr diff "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}" > "$RUNNER_TEMP/pr.diff"
+
+      - name: Review with EmberGuard (observe mode)
+        env:
+          EMBERGUARD_MOCK: "1"
+          EMBERGUARD_MODE: "observe"
+        run: |
+          python3 -m src.main \
+            --diff "$RUNNER_TEMP/pr.diff" \
+            --repo-root "$GITHUB_WORKSPACE" \
+            --mode observe \
+            --ledger-out "$RUNNER_TEMP/emberguard-ledger.json"

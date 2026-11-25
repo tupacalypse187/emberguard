@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+emberguard-ledger.json
+*.egg-info/
+.venv/
